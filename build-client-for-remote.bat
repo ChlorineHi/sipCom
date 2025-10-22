@@ -19,7 +19,7 @@ echo ✓ 备份完成
 
 echo.
 echo [2/4] 修改服务器地址为: %SERVER_IP%
-powershell -Command "(Get-Content '%CONFIG_FILE%') -replace 'SERVER_HOST = \"localhost\"', 'SERVER_HOST = \"%SERVER_IP%\"' | Set-Content '%CONFIG_FILE%' -Encoding UTF8"
+powershell -NoProfile -Command "$content = Get-Content '%CONFIG_FILE%' -Raw -Encoding UTF8; $content = $content -replace 'SERVER_HOST = \"localhost\"', 'SERVER_HOST = \"%SERVER_IP%\"'; [System.IO.File]::WriteAllText('%CONFIG_FILE%', $content, (New-Object System.Text.UTF8Encoding $false))"
 if errorlevel 1 (
     echo [错误] 无法修改配置文件
     pause
@@ -47,6 +47,7 @@ mkdir "%DEPLOY_DIR%"
 
 copy "sip-client\target\sip-client-1.0.0.jar" "%DEPLOY_DIR%\" >nul
 echo @echo off > "%DEPLOY_DIR%\start.bat"
+echo chcp 65001 ^>nul >> "%DEPLOY_DIR%\start.bat"
 echo echo ======================================== >> "%DEPLOY_DIR%\start.bat"
 echo echo    SipEx 客户端 >> "%DEPLOY_DIR%\start.bat"
 echo echo    服务器: %SERVER_IP%:8080 >> "%DEPLOY_DIR%\start.bat"
@@ -77,4 +78,3 @@ echo 包含文件:
 dir /b "%DEPLOY_DIR%"
 echo.
 pause
-
