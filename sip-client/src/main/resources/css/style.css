@@ -1,0 +1,146 @@
+/* 全局样式 */
+.root {
+    -fx-font-family: "Microsoft YaHei", "SimSun", sans-serif;
+    -fx-font-size: 14px;
+    -fx-background-color: #f5f5f5;
+}
+
+/* 工具栏 */
+.toolbar {
+    -fx-background-color: #2196F3;
+    -fx-padding: 10;
+}
+
+.toolbar .label {
+    -fx-text-fill: white;
+}
+
+.toolbar .text-field,
+.toolbar .password-field {
+    -fx-background-radius: 5;
+}
+
+.toolbar .button {
+    -fx-background-color: #4CAF50;
+    -fx-text-fill: white;
+    -fx-background-radius: 5;
+    -fx-padding: 8 15;
+}
+
+.toolbar .button:hover {
+    -fx-background-color: #45a049;
+}
+
+.status-label {
+    -fx-text-fill: #FFEB3B;
+    -fx-font-weight: bold;
+}
+
+.current-user {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 16px;
+}
+
+/* 联系人面板 */
+.contact-panel {
+    -fx-background-color: white;
+}
+
+.contact-panel .list-view {
+    -fx-background-color: white;
+}
+
+.contact-panel .list-cell {
+    -fx-padding: 10;
+}
+
+.contact-panel .list-cell:hover {
+    -fx-background-color: #e3f2fd;
+}
+
+.contact-panel .list-cell:selected {
+    -fx-background-color: #2196F3;
+    -fx-text-fill: white;
+}
+
+/* 聊天面板 */
+.chat-panel {
+    -fx-background-color: white;
+}
+
+.chat-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #333;
+}
+
+.chat-panel .list-view {
+    -fx-background-color: #fafafa;
+}
+
+.chat-panel .text-area {
+    -fx-background-radius: 5;
+    -fx-border-color: #ddd;
+    -fx-border-radius: 5;
+}
+
+.chat-panel .button {
+    -fx-background-color: #2196F3;
+    -fx-text-fill: white;
+    -fx-background-radius: 5;
+    -fx-padding: 8 15;
+}
+
+.chat-panel .button:hover {
+    -fx-background-color: #1976D2;
+}
+
+/* 信息面板 */
+.info-panel {
+    -fx-background-color: white;
+}
+
+.panel-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #333;
+}
+
+.info-panel .button {
+    -fx-background-color: #FF9800;
+    -fx-text-fill: white;
+    -fx-background-radius: 5;
+    -fx-padding: 10 20;
+}
+
+.info-panel .button:hover {
+    -fx-background-color: #F57C00;
+}
+
+/* 状态栏 */
+.status-bar {
+    -fx-background-color: #424242;
+    -fx-padding: 5 10;
+}
+
+.status-bar .label {
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+}
+
+/* 消息气泡样式 */
+.message-bubble {
+    -fx-background-color: #E3F2FD;
+    -fx-background-radius: 10;
+    -fx-padding: 10;
+    -fx-max-width: 400;
+}
+
+.message-bubble-self {
+    -fx-background-color: #C8E6C9;
+    -fx-background-radius: 10;
+    -fx-padding: 10;
+    -fx-max-width: 400;
+}
+

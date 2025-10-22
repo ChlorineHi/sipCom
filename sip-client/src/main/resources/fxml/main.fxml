@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.sipex.client.ui.MainController" stylesheets="@../css/style.css">
+
+    <!-- 顶部工具栏 -->
+    <top>
+        <HBox spacing="10" styleClass="toolbar" alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+
+            <Label text="用户名:"/>
+            <TextField fx:id="usernameField" promptText="输入用户名" prefWidth="150"/>
+            <Label text="密码:"/>
+            <PasswordField fx:id="passwordField" promptText="输入密码" prefWidth="150"/>
+            <Button fx:id="loginButton" text="登录" onAction="#handleLogin"/>
+            <Label fx:id="statusLabel" text="未连接" styleClass="status-label"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="currentUserLabel" text="" styleClass="current-user"/>
+        </HBox>
+    </top>
+
+    <!-- 主体区域 -->
+    <center>
+        <SplitPane dividerPositions="0.25, 0.75">
+            <!-- 左侧：联系人和群组列表 -->
+            <VBox spacing="5" styleClass="contact-panel">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+
+                <TabPane VBox.vgrow="ALWAYS">
+                    <Tab text="联系人" closable="false">
+                        <ListView fx:id="contactListView" onMouseClicked="#handleContactClick"/>
+                    </Tab>
+                    <Tab text="群组" closable="false">
+                        <ListView fx:id="groupListView" onMouseClicked="#handleGroupClick"/>
+                    </Tab>
+                </TabPane>
+            </VBox>
+
+            <!-- 中间：聊天窗口 -->
+            <VBox spacing="5" styleClass="chat-panel">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+
+                <Label fx:id="chatTitleLabel" text="选择联系人开始聊天" styleClass="chat-title"/>
+                <Separator/>
+
+                <!-- 视频显示区域 -->
+                <javafx.scene.image.ImageView fx:id="remoteVideoView" fitWidth="320" fitHeight="240" preserveRatio="true" visible="false" style="-fx-border-color: #3498db; -fx-border-width: 2;"/>
+
+                <!-- 消息显示区域 -->
+                <ListView fx:id="messageListView" VBox.vgrow="ALWAYS"/>
+
+                <!-- 消息输入区域 -->
+                <HBox spacing="5" alignment="CENTER">
+                    <Button text="图片" onAction="#handleSendImage"/>
+                    <Button text="文件" onAction="#handleSendFile"/>
+                    <Button text="语音通话" onAction="#handleAudioCall"/>
+                    <Button text="视频通话" onAction="#handleVideoCall"/>
+                    <Button fx:id="hangupButton" text="挂断" onAction="#handleHangup" style="-fx-background-color: #e74c3c; -fx-text-fill: white;" visible="false"/>
+                    <Button fx:id="switchVideoSourceButton" text="切换到屏幕" onAction="#handleSwitchVideoSource" style="-fx-background-color: #9b59b6; -fx-text-fill: white;" visible="false"/>
+                </HBox>
+
+                <HBox spacing="5" alignment="CENTER">
+                    <TextArea fx:id="messageInput" promptText="输入消息..." prefRowCount="3" HBox.hgrow="ALWAYS"/>
+                    <Button fx:id="sendButton" text="发送" onAction="#handleSendMessage" prefHeight="60"/>
+                </HBox>
+            </VBox>
+
+            <!-- 右侧：用户信息面板 -->
+            <VBox spacing="10" styleClass="info-panel">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+
+                <Label text="联系人信息" styleClass="panel-title"/>
+                <Separator/>
+                <Label fx:id="contactInfoLabel" text="选择联系人查看详情" wrapText="true"/>
+
+                <Region VBox.vgrow="ALWAYS"/>
+
+                <Button text="管理后台" onAction="#handleOpenAdmin" prefWidth="150"/>
+            </VBox>
+        </SplitPane>
+    </center>
+
+    <!-- 底部状态栏 -->
+    <bottom>
+        <HBox spacing="10" styleClass="status-bar" alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="5" right="10" bottom="5" left="10"/>
+            </padding>
+            <Label text="SIP状态:"/>
+            <Label fx:id="sipStatusLabel" text="未注册"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label text="Kamailio: 172.22.189.160:5060"/>
+        </HBox>
+    </bottom>
+</BorderPane>
+

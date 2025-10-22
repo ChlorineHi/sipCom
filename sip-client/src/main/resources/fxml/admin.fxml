@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.sipex.client.ui.AdminController" spacing="10">
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <!-- 标题 -->
+    <Label text="SIP系统管理后台" style="-fx-font-size: 24px; -fx-font-weight: bold;"/>
+    <Separator/>
+
+    <!-- 统计信息 -->
+    <VBox spacing="10">
+        <Label text="系统统计" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+        <GridPane hgap="20" vgap="10">
+            <Label text="总用户数:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <Label fx:id="totalUsersLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="0" style="-fx-font-weight: bold;"/>
+
+            <Label text="总消息数:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <Label fx:id="totalMessagesLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="1" style="-fx-font-weight: bold;"/>
+
+            <Label text="今日消息数:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+            <Label fx:id="todayMessagesLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="2" style="-fx-font-weight: bold;"/>
+
+            <Label text="今日通话时长:" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+            <Label fx:id="todayCallDurationLabel" text="0秒" GridPane.columnIndex="1" GridPane.rowIndex="3" style="-fx-font-weight: bold;"/>
+        </GridPane>
+    </VBox>
+
+    <Separator/>
+
+    <!-- 用户管理 -->
+    <VBox spacing="10" VBox.vgrow="ALWAYS">
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Label text="用户管理" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="刷新" onAction="#handleRefresh"/>
+        </HBox>
+
+        <TabPane VBox.vgrow="ALWAYS">
+            <Tab text="用户列表" closable="false">
+                <TableView fx:id="usersTableView">
+                    <columns>
+                        <TableColumn text="ID" prefWidth="60"/>
+                        <TableColumn text="用户名" prefWidth="150"/>
+                        <TableColumn text="SIP URI" prefWidth="250"/>
+                        <TableColumn text="状态" prefWidth="100"/>
+                        <TableColumn text="创建时间" prefWidth="200"/>
+                    </columns>
+                </TableView>
+            </Tab>
+
+            <Tab text="群组列表" closable="false">
+                <TableView fx:id="groupsTableView">
+                    <columns>
+                        <TableColumn text="ID" prefWidth="60"/>
+                        <TableColumn text="群名称" prefWidth="200"/>
+                        <TableColumn text="创建者ID" prefWidth="100"/>
+                        <TableColumn text="描述" prefWidth="300"/>
+                        <TableColumn text="创建时间" prefWidth="200"/>
+                    </columns>
+                </TableView>
+            </Tab>
+
+            <Tab text="通话记录" closable="false">
+                <TableView fx:id="callLogsTableView">
+                    <columns>
+                        <TableColumn text="ID" prefWidth="60"/>
+                        <TableColumn text="主叫" prefWidth="120"/>
+                        <TableColumn text="被叫" prefWidth="120"/>
+                        <TableColumn text="类型" prefWidth="80"/>
+                        <TableColumn text="状态" prefWidth="100"/>
+                        <TableColumn text="时长(秒)" prefWidth="100"/>
+                        <TableColumn text="时间" prefWidth="200"/>
+                    </columns>
+                </TableView>
+            </Tab>
+        </TabPane>
+    </VBox>
+</VBox>
+
