@@ -338,7 +338,12 @@ public class ConferenceController implements ConferenceSipManager.ConferenceCall
         box.getChildren().addAll(videoView, nameLabel, statusLabel);
         
         // 保存到媒体管理器
-        mediaManager.setVideoView(username, videoView);
+        // 如果是本地用户（包含"(我)"），使用原始用户名
+        String videoKey = username;
+        if (username.contains(" (我)")) {
+            videoKey = username.replace(" (我)", "");  // 移除"(我)"标识
+        }
+        mediaManager.setVideoView(videoKey, videoView);
         
         return box;
     }

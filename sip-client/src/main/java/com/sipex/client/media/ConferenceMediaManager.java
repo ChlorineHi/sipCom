@@ -121,8 +121,8 @@ public class ConferenceMediaManager {
             conn.username = username;
             conn.remoteIp = parseSdpIp(remoteSdp);
             conn.remoteAudioPort = parseSdpAudioPort(remoteSdp);
-            conn.localAudioPort = baseAudioPort + participantIndex * 2;
-            conn.localVideoPort = baseVideoPort + participantIndex * 2;
+            conn.localAudioPort = baseAudioPort + (participantIndex + 1) * 2;  // +1 避免与本地端口冲突
+            conn.localVideoPort = baseVideoPort + (participantIndex + 1) * 2;
             
             // 添加到混音器
             conn.audioMixerIndex = audioMixer.addAudioSource();
@@ -132,7 +132,7 @@ public class ConferenceMediaManager {
                 audioData -> audioMixer.addAudioData(conn.audioMixerIndex, audioData));
             conn.audioReceiver.start();
             
-            // 为这个参与者创建音频发送器（从本地音频发送器复制数据）
+            // 为这个参与者创建音频发送器（发送本地音频到该参与者）
             conn.audioSender = new RtpAudioSender(
                 conn.localAudioPort + 1, 
                 conn.remoteIp, 
@@ -140,14 +140,7 @@ public class ConferenceMediaManager {
             );
             conn.audioSender.start();
             
-            // 更新本地音频发送器的目标（如果这是第一个参与者）
-            if (localAudioSender != null && participants.isEmpty()) {
-                // 重新配置本地音频发送器发送到第一个参与者
-                localAudioSender.stop();
-                localAudioSender = new RtpAudioSender(baseAudioPort, conn.remoteIp, conn.remoteAudioPort);
-                localAudioSender.start();
-                System.out.println("本地音频发送器已重新配置到: " + conn.remoteIp + ":" + conn.remoteAudioPort);
-            }
+            System.out.println("为参与者 " + username + " 创建音频发送器: " + conn.remoteIp + ":" + conn.remoteAudioPort);
             
             // 处理视频
             if (includeVideo && remoteSdp.contains("m=video")) {
