@@ -20,6 +20,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
@@ -42,6 +43,7 @@ public class MainController implements SipCallListener, SipMessageListener {
     @FXML private Label statusLabel;
     @FXML private Label currentUserLabel;
     @FXML private Label sipStatusLabel;
+    @FXML private Button conferenceButton;
 
     @FXML private ListView<User> contactListView;
     @FXML private ListView<Group> groupListView;
@@ -61,6 +63,7 @@ public class MainController implements SipCallListener, SipMessageListener {
     private User currentUser;
     private User currentContact;
     private Group currentGroup;
+    private String jwtToken; // JWT token
 
     private ServerTransaction currentCallTransaction;
     private Request currentCallRequest;
@@ -128,6 +131,11 @@ public class MainController implements SipCallListener, SipMessageListener {
                     GsonUtil.getGson().toJson(data.get("user")), 
                     User.class
                 );
+                
+                // 保存JWT token
+                if (data.containsKey("token")) {
+                    jwtToken = (String) data.get("token");
+                }
 
                 currentUserLabel.setText("当前用户: " + currentUser.getUsername());
                 statusLabel.setText("已连接");
@@ -145,6 +153,11 @@ public class MainController implements SipCallListener, SipMessageListener {
                 usernameField.setDisable(true);
                 passwordField.setDisable(true);
                 loginButton.setDisable(true);
+                
+                // 显示群聊会议按钮
+                if (conferenceButton != null) {
+                    conferenceButton.setVisible(true);
+                }
 
                 showAlert("成功", "登录成功！");
             } else {
@@ -558,6 +571,119 @@ public class MainController implements SipCallListener, SipMessageListener {
         alert.setHeaderText(null);
         alert.setContentText(content);
         alert.show();
+    }
+    
+    /**
+     * 处理群聊会议按钮点击
+     */
+    @FXML
+    private void handleConference() {
+        if (currentUser == null) {
+            showAlert("提示", "请先登录");
+            return;
+        }
+        
+        // 检查是否在通话中
+        if (inCall) {
+            showAlert("提示", "请先结束当前通话");
+            return;
+        }
+        
+        // 弹出选择对话框：创建会议室或加入会议室
+        Alert choiceAlert = new Alert(Alert.AlertType.CONFIRMATION);
+        choiceAlert.setTitle("群聊会议");
+        choiceAlert.setHeaderText("选择操作");
+        choiceAlert.setContentText("是否创建新会议室？");
+        
+        ButtonType createButton = new ButtonType("创建会议室");
+        ButtonType joinButton = new ButtonType("加入会议室");
+        ButtonType cancelButton = new ButtonType("取消", ButtonBar.ButtonData.CANCEL_CLOSE);
+        
+        choiceAlert.getButtonTypes().setAll(createButton, joinButton, cancelButton);
+        
+        choiceAlert.showAndWait().ifPresent(response -> {
+            if (response == createButton) {
+                createConferenceRoom();
+            } else if (response == joinButton) {
+                joinConferenceRoom();
+            }
+        });
+    }
+    
+    /**
+     * 创建会议室
+     */
+    private void createConferenceRoom() {
+        try {
+            // 加载会议界面
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/conference.fxml"));
+            BorderPane root = loader.load();
+            
+            // 获取控制器
+            ConferenceController controller = loader.getController();
+            
+            // 创建新窗口
+            Stage conferenceStage = new Stage();
+            conferenceStage.setTitle("群聊会议");
+            conferenceStage.setScene(new Scene(root, 1000, 700));
+            
+            // 窗口关闭时清理资源
+            conferenceStage.setOnCloseRequest(event -> {
+                // 会议控制器会自动清理
+            });
+            
+            // 显示窗口
+            conferenceStage.show();
+            
+            // 创建会议室
+            controller.createConference(currentUser.getUsername(), jwtToken);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("错误", "创建会议室失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 加入会议室
+     */
+    private void joinConferenceRoom() {
+        // 弹出输入对话框
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle("加入会议室");
+        dialog.setHeaderText("输入会议室号");
+        dialog.setContentText("请输入会议室号（如：ROOM-1234）：");
+        
+        dialog.showAndWait().ifPresent(roomId -> {
+            if (roomId.trim().isEmpty()) {
+                showAlert("提示", "请输入会议室号");
+                return;
+            }
+            
+            try {
+                // 加载会议界面
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/conference.fxml"));
+                BorderPane root = loader.load();
+                
+                // 获取控制器
+                ConferenceController controller = loader.getController();
+                
+                // 创建新窗口
+                Stage conferenceStage = new Stage();
+                conferenceStage.setTitle("群聊会议 - " + roomId);
+                conferenceStage.setScene(new Scene(root, 1000, 700));
+                
+                // 显示窗口
+                conferenceStage.show();
+                
+                // 加入会议室
+                controller.joinConference(currentUser.getUsername(), roomId.trim(), jwtToken);
+                
+            } catch (Exception e) {
+                e.printStackTrace();
+                showAlert("错误", "加入会议室失败: " + e.getMessage());
+            }
+        });
     }
 }
 

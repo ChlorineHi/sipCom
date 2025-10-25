@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.ImageView?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.sipex.client.ui.ConferenceController"
+            prefWidth="1000" prefHeight="700"
+            stylesheets="@../css/conference.css">
+    
+    <!-- 顶部标题栏 -->
+    <top>
+        <HBox styleClass="top-bar" spacing="20" alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="15" right="20" bottom="15" left="20"/>
+            </padding>
+            <Label fx:id="roomIdLabel" text="会议室: 未连接" styleClass="room-title"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="participantCountLabel" text="参与者: 0/5" styleClass="participant-count"/>
+            <Button fx:id="leaveButton" text="离开会议" onAction="#handleLeaveConference" styleClass="leave-button"/>
+        </HBox>
+    </top>
+    
+    <!-- 中间视频网格区域 -->
+    <center>
+        <ScrollPane fitToWidth="true" fitToHeight="true" styleClass="video-scroll">
+            <content>
+                <GridPane fx:id="videoGrid" hgap="10" vgap="10" alignment="CENTER" styleClass="video-grid">
+                    <padding>
+                        <Insets top="20" right="20" bottom="20" left="20"/>
+                    </padding>
+                </GridPane>
+            </content>
+        </ScrollPane>
+    </center>
+    
+    <!-- 底部控制面板 -->
+    <bottom>
+        <VBox spacing="10" styleClass="bottom-panel">
+            <padding>
+                <Insets top="15" right="20" bottom="15" left="20"/>
+            </padding>
+            
+            <!-- 参与者列表 -->
+            <TitledPane text="参与者列表" expanded="true" collapsible="true">
+                <ListView fx:id="participantListView" prefHeight="120" styleClass="participant-list"/>
+            </TitledPane>
+            
+            <!-- 控制按钮 -->
+            <HBox spacing="15" alignment="CENTER">
+                <Button fx:id="muteButton" text="🎤 静音" onAction="#handleMute" styleClass="control-button"/>
+                <Button fx:id="videoButton" text="📹 关闭视频" onAction="#handleVideo" styleClass="control-button"/>
+                <Button fx:id="switchVideoButton" text="切换摄像头" onAction="#handleSwitchVideo" styleClass="control-button"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="statusLabel" text="准备就绪" styleClass="status-label"/>
+            </HBox>
+        </VBox>
+    </bottom>
+    
+</BorderPane>
+

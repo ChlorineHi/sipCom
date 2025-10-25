@@ -46,15 +46,19 @@ if exist "%DEPLOY_DIR%" rmdir /s /q "%DEPLOY_DIR%"
 mkdir "%DEPLOY_DIR%"
 
 copy "sip-client\target\sip-client-1.0.0.jar" "%DEPLOY_DIR%\" >nul
-echo @echo off > "%DEPLOY_DIR%\start.bat"
-echo chcp 65001 ^>nul >> "%DEPLOY_DIR%\start.bat"
-echo echo ======================================== >> "%DEPLOY_DIR%\start.bat"
-echo echo    SipEx 客户端 >> "%DEPLOY_DIR%\start.bat"
-echo echo    服务器: %SERVER_IP%:8080 >> "%DEPLOY_DIR%\start.bat"
-echo echo ======================================== >> "%DEPLOY_DIR%\start.bat"
-echo echo. >> "%DEPLOY_DIR%\start.bat"
-echo java -jar sip-client-1.0.0.jar >> "%DEPLOY_DIR%\start.bat"
-echo pause >> "%DEPLOY_DIR%\start.bat"
+
+REM 创建启动脚本
+(
+echo @echo off
+echo chcp 65001 ^>nul
+echo echo ========================================
+echo echo    SipEx 客户端
+echo echo    服务器: %SERVER_IP%:8080
+echo echo ========================================
+echo echo.
+echo java -jar sip-client-1.0.0.jar
+echo pause
+) > "%DEPLOY_DIR%\start.bat"
 
 echo.
 echo ✓ 部署包创建完成
