@@ -24,7 +24,7 @@ public class ConferenceMediaManager {
     private AudioMixer audioMixer;
     
     // 本地音频和视频发送器、接收器
-    private RtpAudioSender localAudioSender;
+    private SharedAudioCapture sharedAudioCapture;
     private RtpVideoSender localVideoSender;
     private RtpVideoReceiver localVideoReceiver;
     
@@ -42,7 +42,7 @@ public class ConferenceMediaManager {
         int localAudioPort;
         int localVideoPort;
         
-        RtpAudioSender audioSender;
+        RtpAudioForwarder audioForwarder;
         RtpAudioReceiver audioReceiver;
         RtpVideoSender videoSender;
         RtpVideoReceiver videoReceiver;
@@ -132,15 +132,15 @@ public class ConferenceMediaManager {
                 audioData -> audioMixer.addAudioData(conn.audioMixerIndex, audioData));
             conn.audioReceiver.start();
             
-            // 为这个参与者创建音频发送器（发送本地音频到该参与者）
-            conn.audioSender = new RtpAudioSender(
+            // 为这个参与者创建音频转发器（发送共享音频到该参与者）
+            conn.audioForwarder = new RtpAudioForwarder(
                 conn.localAudioPort + 1, 
                 conn.remoteIp, 
                 conn.remoteAudioPort
             );
-            conn.audioSender.start();
+            conn.audioForwarder.start();
             
-            System.out.println("为参与者 " + username + " 创建音频发送器: " + conn.remoteIp + ":" + conn.remoteAudioPort);
+            System.out.println("为参与者 " + username + " 创建音频转发器: " + conn.remoteIp + ":" + conn.remoteAudioPort);
             
             // 处理视频
             if (includeVideo && remoteSdp.contains("m=video")) {
@@ -180,7 +180,7 @@ public class ConferenceMediaManager {
         ParticipantConnection conn = participants.remove(username);
         if (conn != null) {
             // 停止音频
-            if (conn.audioSender != null) conn.audioSender.stop();
+            if (conn.audioForwarder != null) conn.audioForwarder.stop();
             if (conn.audioReceiver != null) conn.audioReceiver.stop();
             
             // 停止视频
@@ -220,15 +220,12 @@ public class ConferenceMediaManager {
     public void startConference() {
         audioMixer.start();
         
-        // 启动本地音频采集和发送
+        // 启动共享音频采集器
         try {
-            // 创建本地音频发送器（发送到本地回环地址用于测试，实际会在有参与者时更新目标）
-            localAudioSender = new RtpAudioSender(baseAudioPort, "127.0.0.1", baseAudioPort + 1);
-            localAudioSender.start();
-            
-            System.out.println("本地音频采集已启动");
+            sharedAudioCapture = SharedAudioCapture.getInstance();
+            System.out.println("共享音频采集器已准备就绪");
         } catch (Exception e) {
-            System.err.println("启动本地音频失败: " + e.getMessage());
+            System.err.println("启动共享音频采集器失败: " + e.getMessage());
         }
         
         // 启动本地视频采集和预览
@@ -260,9 +257,9 @@ public class ConferenceMediaManager {
         }
         
         // 停止本地音频和视频发送器、接收器
-        if (localAudioSender != null) {
-            localAudioSender.stop();
-            localAudioSender = null;
+        if (sharedAudioCapture != null) {
+            // 共享音频采集器会自动管理生命周期
+            sharedAudioCapture = null;
         }
         if (localVideoSender != null) {
             localVideoSender.stop();
