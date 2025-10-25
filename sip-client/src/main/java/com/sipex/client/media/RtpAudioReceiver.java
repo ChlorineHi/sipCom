@@ -13,6 +13,7 @@ public class RtpAudioReceiver implements Runnable {
     private final DatagramSocket socket;
     private SourceDataLine speaker;
     private volatile boolean running = false;
+    private AudioDataCallback audioDataCallback;
 
     // RTP参数
     private static final int SAMPLE_RATE = 8000;
@@ -20,7 +21,19 @@ public class RtpAudioReceiver implements Runnable {
 
     public RtpAudioReceiver(int localPort) throws Exception {
         this.socket = new DatagramSocket(localPort);
-        
+        initializeSpeaker();
+    }
+    
+    public RtpAudioReceiver(int localPort, AudioDataCallback callback) throws Exception {
+        this.socket = new DatagramSocket(localPort);
+        this.audioDataCallback = callback;
+        // 如果有回调，不初始化扬声器（数据将通过回调传递）
+        if (callback == null) {
+            initializeSpeaker();
+        }
+    }
+    
+    private void initializeSpeaker() throws Exception {
         // 初始化扬声器
         AudioFormat format = new AudioFormat(SAMPLE_RATE, 16, 1, true, false);
         DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
@@ -35,7 +48,9 @@ public class RtpAudioReceiver implements Runnable {
 
     public void start() {
         running = true;
-        speaker.start();
+        if (speaker != null) {
+            speaker.start();
+        }
         new Thread(this, "RTP-Audio-Receiver").start();
         System.out.println("✅ RTP音频接收器已启动: 端口 " + socket.getLocalPort());
     }
@@ -85,8 +100,14 @@ public class RtpAudioReceiver implements Runnable {
                     pcmData[i * 2 + 1] = (byte) ((sample >> 8) & 0xFF);
                 }
                 
-                // 播放音频
-                speaker.write(pcmData, 0, pcmData.length);
+                // 播放音频或通过回调传递数据
+                if (audioDataCallback != null) {
+                    // 通过回调传递数据（用于混音器）
+                    audioDataCallback.onAudioData(pcmData);
+                } else if (speaker != null) {
+                    // 直接播放
+                    speaker.write(pcmData, 0, pcmData.length);
+                }
                 
             } catch (Exception e) {
                 if (running) {

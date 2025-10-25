@@ -23,7 +23,8 @@ public class ConferenceMediaManager {
     // 音频混音器
     private AudioMixer audioMixer;
     
-    // 本地视频发送器和接收器
+    // 本地音频和视频发送器、接收器
+    private RtpAudioSender localAudioSender;
     private RtpVideoSender localVideoSender;
     private RtpVideoReceiver localVideoReceiver;
     
@@ -123,23 +124,30 @@ public class ConferenceMediaManager {
             conn.localAudioPort = baseAudioPort + participantIndex * 2;
             conn.localVideoPort = baseVideoPort + participantIndex * 2;
             
-            // 启动音频接收器
-            conn.audioReceiver = new RtpAudioReceiver(conn.localAudioPort);
-            conn.audioReceiver.start();
-            
             // 添加到混音器
             conn.audioMixerIndex = audioMixer.addAudioSource();
             
-            // 创建音频接收线程（将数据传递给混音器）
-            startAudioReceiving(conn);
+            // 启动音频接收器（带回调，将数据传递给混音器）
+            conn.audioReceiver = new RtpAudioReceiver(conn.localAudioPort, 
+                audioData -> audioMixer.addAudioData(conn.audioMixerIndex, audioData));
+            conn.audioReceiver.start();
             
-            // 启动音频发送器
+            // 为这个参与者创建音频发送器（从本地音频发送器复制数据）
             conn.audioSender = new RtpAudioSender(
                 conn.localAudioPort + 1, 
                 conn.remoteIp, 
                 conn.remoteAudioPort
             );
             conn.audioSender.start();
+            
+            // 更新本地音频发送器的目标（如果这是第一个参与者）
+            if (localAudioSender != null && participants.isEmpty()) {
+                // 重新配置本地音频发送器发送到第一个参与者
+                localAudioSender.stop();
+                localAudioSender = new RtpAudioSender(baseAudioPort, conn.remoteIp, conn.remoteAudioPort);
+                localAudioSender.start();
+                System.out.println("本地音频发送器已重新配置到: " + conn.remoteIp + ":" + conn.remoteAudioPort);
+            }
             
             // 处理视频
             if (includeVideo && remoteSdp.contains("m=video")) {
@@ -171,22 +179,6 @@ public class ConferenceMediaManager {
         }
     }
     
-    /**
-     * 启动音频接收线程（传递给混音器）
-     */
-    private void startAudioReceiving(ParticipantConnection conn) {
-        new Thread(() -> {
-            try {
-                while (participants.containsKey(conn.username)) {
-                    // 这里简化处理，实际应该从RtpAudioReceiver读取数据
-                    // 由于当前RtpAudioReceiver直接播放，需要修改为提供数据接口
-                    Thread.sleep(20);
-                }
-            } catch (Exception e) {
-                System.err.println("音频接收线程错误: " + e.getMessage());
-            }
-        }, "Audio-Receive-" + conn.username).start();
-    }
     
     /**
      * 移除参与者
@@ -235,6 +227,17 @@ public class ConferenceMediaManager {
     public void startConference() {
         audioMixer.start();
         
+        // 启动本地音频采集和发送
+        try {
+            // 创建本地音频发送器（发送到本地回环地址用于测试，实际会在有参与者时更新目标）
+            localAudioSender = new RtpAudioSender(baseAudioPort, "127.0.0.1", baseAudioPort + 1);
+            localAudioSender.start();
+            
+            System.out.println("本地音频采集已启动");
+        } catch (Exception e) {
+            System.err.println("启动本地音频失败: " + e.getMessage());
+        }
+        
         // 启动本地视频采集和预览
         try {
             // 创建本地视频发送器（发送到本地回环地址用于自己预览）
@@ -263,7 +266,11 @@ public class ConferenceMediaManager {
             audioMixer.stop();
         }
         
-        // 停止本地视频发送器和接收器
+        // 停止本地音频和视频发送器、接收器
+        if (localAudioSender != null) {
+            localAudioSender.stop();
+            localAudioSender = null;
+        }
         if (localVideoSender != null) {
             localVideoSender.stop();
             localVideoSender = null;
