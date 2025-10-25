@@ -114,6 +114,12 @@ public class ConferenceMediaManager {
      * 添加参与者
      */
     public void addParticipant(String username, String remoteSdp, boolean includeVideo) {
+        // 检查参与者是否已存在
+        if (participants.containsKey(username)) {
+            System.out.println("参与者 " + username + " 已存在，跳过添加");
+            return;
+        }
+        
         try {
             int participantIndex = participants.size();
             
@@ -121,8 +127,9 @@ public class ConferenceMediaManager {
             conn.username = username;
             conn.remoteIp = parseSdpIp(remoteSdp);
             conn.remoteAudioPort = parseSdpAudioPort(remoteSdp);
-            conn.localAudioPort = baseAudioPort + (participantIndex + 1) * 2;  // +1 避免与本地端口冲突
-            conn.localVideoPort = baseVideoPort + (participantIndex + 1) * 2;
+            // 分配端口，确保不冲突
+            conn.localAudioPort = findAvailablePort(baseAudioPort + (participantIndex + 1) * 2);
+            conn.localVideoPort = findAvailablePort(baseVideoPort + (participantIndex + 1) * 2);
             
             // 添加到混音器
             conn.audioMixerIndex = audioMixer.addAudioSource();
@@ -323,6 +330,29 @@ public class ConferenceMediaManager {
             }
         }
         return 5006;
+    }
+    
+    /**
+     * 查找可用端口
+     */
+    private int findAvailablePort(int startPort) {
+        for (int port = startPort; port < startPort + 100; port += 2) {
+            if (isPortAvailable(port)) {
+                return port;
+            }
+        }
+        throw new RuntimeException("无法找到可用端口，起始端口: " + startPort);
+    }
+    
+    /**
+     * 检查端口是否可用
+     */
+    private boolean isPortAvailable(int port) {
+        try (java.net.DatagramSocket socket = new java.net.DatagramSocket(port)) {
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }
 
