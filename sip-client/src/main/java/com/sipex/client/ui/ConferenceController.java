@@ -112,6 +112,13 @@ public class ConferenceController implements ConferenceSipManager.ConferenceCall
                 // 启动会议
                 mediaManager.startConference();
                 
+                // 为自己创建视频显示框
+                Platform.runLater(() -> {
+                    VBox localVideoBox = createVideoBox(username + " (我)");
+                    participantVideoBoxes.put(username, localVideoBox);
+                    updateVideoGrid();
+                });
+                
                 // 开始轮询参与者列表
                 startPolling();
                 
@@ -165,6 +172,13 @@ public class ConferenceController implements ConferenceSipManager.ConferenceCall
                 
                 // 启动会议
                 mediaManager.startConference();
+                
+                // 为自己创建视频显示框
+                Platform.runLater(() -> {
+                    VBox localVideoBox = createVideoBox(username + " (我)");
+                    participantVideoBoxes.put(username, localVideoBox);
+                    updateVideoGrid();
+                });
                 
                 // 向所有已存在的参与者发起呼叫
                 for (String participant : conferenceData.getParticipants()) {

@@ -23,6 +23,10 @@ public class ConferenceMediaManager {
     // 音频混音器
     private AudioMixer audioMixer;
     
+    // 本地视频发送器和接收器
+    private RtpVideoSender localVideoSender;
+    private RtpVideoReceiver localVideoReceiver;
+    
     // 视频显示映射
     private final Map<String, ImageView> videoViews;
     
@@ -212,6 +216,17 @@ public class ConferenceMediaManager {
      */
     public void setVideoView(String username, ImageView imageView) {
         videoViews.put(username, imageView);
+        
+        // 如果是本地用户且本地视频发送器已启动，启动本地视频接收器
+        if (localVideoSender != null && localVideoReceiver == null) {
+            try {
+                localVideoReceiver = new RtpVideoReceiver(baseVideoPort + 1, imageView);
+                localVideoReceiver.start();
+                System.out.println("本地视频预览已启动");
+            } catch (Exception e) {
+                System.err.println("启动本地视频预览失败: " + e.getMessage());
+            }
+        }
     }
     
     /**
@@ -219,6 +234,18 @@ public class ConferenceMediaManager {
      */
     public void startConference() {
         audioMixer.start();
+        
+        // 启动本地视频采集和预览
+        try {
+            // 创建本地视频发送器（发送到本地回环地址用于自己预览）
+            localVideoSender = new RtpVideoSender(baseVideoPort, "127.0.0.1", baseVideoPort + 1);
+            localVideoSender.start();
+            
+            System.out.println("本地视频采集已启动");
+        } catch (Exception e) {
+            System.err.println("启动本地视频失败: " + e.getMessage());
+        }
+        
         System.out.println("会议已启动");
     }
     
@@ -234,6 +261,16 @@ public class ConferenceMediaManager {
         // 停止混音器
         if (audioMixer != null) {
             audioMixer.stop();
+        }
+        
+        // 停止本地视频发送器和接收器
+        if (localVideoSender != null) {
+            localVideoSender.stop();
+            localVideoSender = null;
+        }
+        if (localVideoReceiver != null) {
+            localVideoReceiver.stop();
+            localVideoReceiver = null;
         }
         
         System.out.println("会议已停止");
