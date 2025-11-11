@@ -465,6 +465,8 @@ public class MainController implements SipCallListener, SipMessageListener {
             alert.showAndWait().ifPresent(response -> {
                 if (response == ButtonType.OK) {
                     try {
+                        System.out.println("✅ 用户选择接听来电");
+                        
                         // 先停止之前的媒体流（避免端口冲突）
                         mediaManager.stopStreams();
                         
@@ -491,13 +493,33 @@ public class MainController implements SipCallListener, SipMessageListener {
                         inCall = true;
                         hangupButton.setVisible(true);
 
-                        mediaManager.startAudioStream(sdp);
+                        System.out.println("📞 已发送200 OK响应，准备启动媒体流...");
+                        System.out.println("来电SDP: \n" + sdp);
+                        
+                        try {
+                            System.out.println("🎤 准备启动音频流...");
+                            mediaManager.startAudioStream(sdp);
+                            System.out.println("✅ 音频流启动成功");
+                        } catch (Exception audioEx) {
+                            System.err.println("❌ 音频流启动失败: " + audioEx.getMessage());
+                            audioEx.printStackTrace();
+                        }
+                        
                         if (sdp.contains("m=video")) {
                             remoteVideoView.setVisible(true);
                             switchVideoSourceButton.setVisible(true);
-                            mediaManager.startVideoStream(sdp);
+                            
+                            try {
+                                System.out.println("📹 准备启动视频流...");
+                                mediaManager.startVideoStream(sdp);
+                                System.out.println("✅ 视频流启动成功");
+                            } catch (Exception videoEx) {
+                                System.err.println("❌ 视频流启动失败: " + videoEx.getMessage());
+                                videoEx.printStackTrace();
+                            }
                         }
                     } catch (Exception e) {
+                        System.err.println("❌ 处理来电失败: " + e.getMessage());
                         e.printStackTrace();
                     }
                 } else {
@@ -520,11 +542,30 @@ public class MainController implements SipCallListener, SipMessageListener {
             inCall = true;
             hangupButton.setVisible(true);
             
-            mediaManager.startAudioStream(remoteSdp);
+            System.out.println("📞 通话已建立，准备启动媒体流...");
+            System.out.println("远程SDP: \n" + remoteSdp);
+            
+            try {
+                System.out.println("🎤 准备启动音频流...");
+                mediaManager.startAudioStream(remoteSdp);
+                System.out.println("✅ 音频流启动成功");
+            } catch (Exception e) {
+                System.err.println("❌ 音频流启动失败: " + e.getMessage());
+                e.printStackTrace();
+            }
+            
             if (remoteSdp.contains("m=video")) {
                 remoteVideoView.setVisible(true);
                 switchVideoSourceButton.setVisible(true);
-                mediaManager.startVideoStream(remoteSdp);
+                
+                try {
+                    System.out.println("📹 准备启动视频流...");
+                    mediaManager.startVideoStream(remoteSdp);
+                    System.out.println("✅ 视频流启动成功");
+                } catch (Exception e) {
+                    System.err.println("❌ 视频流启动失败: " + e.getMessage());
+                    e.printStackTrace();
+                }
             }
         });
     }
