@@ -86,16 +86,23 @@ public class RtpAudioSender implements Runnable {
             try {
                 DataLine.Info info = new DataLine.Info(TargetDataLine.class, format);
                 
-                if (AudioSystem.isLineSupported(info)) {
+                // 先尝试直接获取行，而不是先检查是否支持
+                // 因为 isLineSupported() 有时会返回假阴性
+                try {
                     TargetDataLine line = (TargetDataLine) AudioSystem.getLine(info);
-                    line.open(format);
-                    this.actualFormat = format;
-                    this.actualSampleRate = (int) format.getSampleRate();
-                    System.out.println("✅ 麦克风初始化成功: " + formatToString(format));
-                    return line;
+                    if (line != null) {
+                        line.open(format);
+                        this.actualFormat = format;
+                        this.actualSampleRate = (int) format.getSampleRate();
+                        System.out.println("✅ 麦克风初始化成功: " + formatToString(format));
+                        return line;
+                    }
+                } catch (IllegalArgumentException iae) {
+                    // 如果这个格式不支持，尝试下一个
+                    System.out.println("⚠️  格式不支持: " + formatToString(format) + " - " + iae.getMessage());
                 }
             } catch (Exception e) {
-                System.out.println("⚠️  格式不支持: " + formatToString(format));
+                System.out.println("⚠️  格式不支持: " + formatToString(format) + " - " + e.getClass().getSimpleName());
                 continue;
             }
         }
