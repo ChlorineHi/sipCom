@@ -362,12 +362,18 @@ public class ConferenceController implements ConferenceSipManager.ConferenceCall
         Platform.runLater(() -> {
             statusLabel.setText(username + " 已连接");
             
-            // 创建视频显示框
-            if (!participantVideoBoxes.containsKey(username)) {
-                VBox videoBox = createVideoBox(username);
-                participantVideoBoxes.put(username, videoBox);
-                updateVideoGrid();
+            // 检查参与者是否已添加（防止重复）
+            if (participantVideoBoxes.containsKey(username)) {
+                System.out.println("⚠️  参与者 " + username + " 已连接过，跳过重复处理");
+                return;
             }
+            
+            System.out.println("✅ 添加新参与者: " + username);
+            
+            // 创建视频显示框
+            VBox videoBox = createVideoBox(username);
+            participantVideoBoxes.put(username, videoBox);
+            updateVideoGrid();
             
             // 启动媒体流
             mediaManager.addParticipant(username, sdp, true);

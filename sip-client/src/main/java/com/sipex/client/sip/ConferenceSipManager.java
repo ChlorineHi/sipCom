@@ -312,13 +312,19 @@ public class ConferenceSipManager implements SipListener {
                 }
             }
             
+            // 检查是否已经连接过（防止重复处理）
+            if (participantDialogs.containsKey(username)) {
+                System.out.println("⚠️  参与者 " + username + " 已连接过，忽略重复的 OK 响应");
+                return;
+            }
+            
             // 保存Dialog
             participantDialogs.put(username, dialog);
             
             // 获取SDP
             String sdp = new String((byte[]) response.getContent());
             
-            System.out.println("参与者 " + username + " 已连接");
+            System.out.println("✅ 参与者 " + username + " 已连接");
             
             // 通知监听器
             if (callListener != null) {
