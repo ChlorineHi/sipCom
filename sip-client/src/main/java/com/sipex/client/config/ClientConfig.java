@@ -8,7 +8,7 @@ public class ClientConfig {
     public static final String WS_URL = "ws://" + SERVER_HOST + ":" + SERVER_PORT + "/ws";
 
     // Kamailio配置
-    public static final String KAMAILIO_HOST = "10.129.161.35";
+    public static final String KAMAILIO_HOST = "10.129.174.156";
     public static final int KAMAILIO_PORT = 5060;
     public static final String SIP_DOMAIN = KAMAILIO_HOST;
 

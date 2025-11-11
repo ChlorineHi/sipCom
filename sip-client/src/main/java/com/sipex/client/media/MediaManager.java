@@ -77,13 +77,33 @@ public class MediaManager {
             System.out.println("远程音频地址: " + remoteIp + ":" + remoteAudioPort);
             System.out.println("本地音频端口: " + localAudioPort);
             
-            // 启动音频接收器
-            audioReceiver = new RtpAudioReceiver(localAudioPort);
-            audioReceiver.start();
+            try {
+                // 启动音频接收器
+                audioReceiver = new RtpAudioReceiver(localAudioPort);
+                audioReceiver.start();
+            } catch (Exception e) {
+                System.err.println("⚠️  音频接收器启动失败: " + e.getMessage());
+                // 不中断主流程，继续尝试发送器
+            }
             
-            // 启动音频发送器
-            audioSender = new RtpAudioSender(localAudioPort + 1, remoteIp, remoteAudioPort);
-            audioSender.start();
+            try {
+                // 启动音频发送器
+                audioSender = new RtpAudioSender(localAudioPort + 1, remoteIp, remoteAudioPort);
+                audioSender.start();
+            } catch (Exception e) {
+                System.err.println("❌ 音频发送器启动失败: " + e.getMessage());
+                e.printStackTrace();
+                // 清理接收器
+                if (audioReceiver != null) {
+                    try {
+                        audioReceiver.stop();
+                    } catch (Exception ex) {
+                        System.err.println("⚠️  清理接收器失败: " + ex.getMessage());
+                    }
+                    audioReceiver = null;
+                }
+                throw e;
+            }
             
             System.out.println("✅ 真实RTP音频流已启动！");
             
@@ -140,13 +160,33 @@ public class MediaManager {
             
             // 启动视频接收器
             if (remoteVideoView != null) {
-                videoReceiver = new RtpVideoReceiver(localVideoPort, remoteVideoView);
-                videoReceiver.start();
+                try {
+                    videoReceiver = new RtpVideoReceiver(localVideoPort, remoteVideoView);
+                    videoReceiver.start();
+                } catch (Exception e) {
+                    System.err.println("⚠️  视频接收器启动失败: " + e.getMessage());
+                    // 不中断主流程
+                }
             }
             
             // 启动视频发送器（屏幕共享）
-            videoSender = new RtpVideoSender(localVideoPort + 1, remoteIp, remoteVideoPort);
-            videoSender.start();
+            try {
+                videoSender = new RtpVideoSender(localVideoPort + 1, remoteIp, remoteVideoPort);
+                videoSender.start();
+            } catch (Exception e) {
+                System.err.println("❌ 视频发送器启动失败: " + e.getMessage());
+                e.printStackTrace();
+                // 清理接收器
+                if (videoReceiver != null) {
+                    try {
+                        videoReceiver.stop();
+                    } catch (Exception ex) {
+                        System.err.println("⚠️  清理视频接收器失败: " + ex.getMessage());
+                    }
+                    videoReceiver = null;
+                }
+                throw e;
+            }
             
             System.out.println("✅ 真实RTP视频流已启动（屏幕共享模式）！");
             
