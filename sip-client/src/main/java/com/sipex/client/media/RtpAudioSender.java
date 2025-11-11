@@ -45,29 +45,40 @@ public class RtpAudioSender implements Runnable {
      */
     private TargetDataLine initializeMicrophone() throws LineUnavailableException {
         // 候选格式列表 (优先级从高到低)
+        // 注意: 包含 8-bit, 16-bit, 24-bit, 32-bit 多种采样位深
         AudioFormat[] formats = {
-            // 格式1: 8kHz, 16-bit, mono, little-endian (首选)
+            // ========== 8kHz 格式（VoIP标准） ==========
             new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 8000f, 16, 1, 2, 8000f, false),
-            // 格式2: 8kHz, 16-bit, mono, big-endian
             new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 8000f, 16, 1, 2, 8000f, true),
-            
-            // 格式3: 8kHz, 8-bit, mono
             new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 8000f, 8, 1, 1, 8000f, false),
             new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 8000f, 8, 1, 1, 8000f, true),
             
-            // 格式4: 16kHz, 16-bit, mono (备选)
+            // ========== 16kHz 格式 ==========
             new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 16000f, 16, 1, 2, 16000f, false),
             new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 16000f, 16, 1, 2, 16000f, true),
-            
-            // 格式5: 16kHz, 8-bit, mono (备选)
             new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 16000f, 8, 1, 1, 16000f, false),
             new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 16000f, 8, 1, 1, 16000f, true),
             
-            // 格式6: 44.1kHz, 16-bit, mono (备选)
+            // ========== 44.1kHz 格式 ==========
             new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100f, 16, 1, 2, 44100f, false),
             new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100f, 16, 1, 2, 44100f, true),
+            new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100f, 8, 1, 1, 44100f, false),
+            new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100f, 8, 1, 1, 44100f, true),
             
-            // 格式7: 立体声作为最后备选
+            // ========== 48kHz 格式（新增 - 用于专业音频设备） ==========
+            new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 48000f, 16, 1, 2, 48000f, false),
+            new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 48000f, 16, 1, 2, 48000f, true),
+            new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 48000f, 24, 1, 3, 48000f, false),
+            new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 48000f, 24, 1, 3, 48000f, true),
+            new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 48000f, 32, 1, 4, 48000f, false),
+            new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 48000f, 32, 1, 4, 48000f, true),
+            new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 48000f, 8, 1, 1, 48000f, false),
+            new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 48000f, 8, 1, 1, 48000f, true),
+            
+            // ========== 立体声作为最后备选 ==========
+            new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 48000f, 24, 2, 6, 48000f, false),
+            new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 48000f, 16, 2, 4, 48000f, false),
+            new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100f, 16, 2, 4, 44100f, false),
             new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 16000f, 16, 2, 4, 16000f, false),
         };
         
@@ -196,19 +207,46 @@ public class RtpAudioSender implements Runnable {
     }
     
     /**
-     * 从字节数组中提取样本
+     * 从字节数组中提取样本（支持 8-bit, 16-bit, 24-bit, 32-bit）
      */
     private short extractSample(byte[] buffer, int index, int sampleSize) {
-        if (sampleSize == 1) {
-            // 8-bit: 直接转换为16-bit
-            return (short) (buffer[index] << 8);
-        } else {
-            // 16-bit: 考虑字节序
-            if (actualFormat.isBigEndian()) {
-                return (short) ((buffer[index * 2] << 8) | (buffer[index * 2 + 1] & 0xFF));
+        try {
+            if (sampleSize == 1) {
+                // 8-bit: 直接转换为16-bit
+                return (short) (buffer[index] << 8);
+            } else if (sampleSize == 2) {
+                // 16-bit: 考虑字节序
+                if (actualFormat.isBigEndian()) {
+                    return (short) ((buffer[index * 2] << 8) | (buffer[index * 2 + 1] & 0xFF));
+                } else {
+                    return (short) ((buffer[index * 2 + 1] << 8) | (buffer[index * 2] & 0xFF));
+                }
+            } else if (sampleSize == 3) {
+                // 24-bit: 取高16位
+                int byteOffset = index * 3;
+                if (actualFormat.isBigEndian()) {
+                    // 大端: 第一字节是最高位
+                    return (short) ((buffer[byteOffset] << 8) | (buffer[byteOffset + 1] & 0xFF));
+                } else {
+                    // 小端: 最后两字节是高16位
+                    return (short) ((buffer[byteOffset + 2] << 8) | (buffer[byteOffset + 1] & 0xFF));
+                }
+            } else if (sampleSize == 4) {
+                // 32-bit: 取高16位
+                int byteOffset = index * 4;
+                if (actualFormat.isBigEndian()) {
+                    return (short) ((buffer[byteOffset] << 8) | (buffer[byteOffset + 1] & 0xFF));
+                } else {
+                    return (short) ((buffer[byteOffset + 3] << 8) | (buffer[byteOffset + 2] & 0xFF));
+                }
             } else {
-                return (short) ((buffer[index * 2 + 1] << 8) | (buffer[index * 2] & 0xFF));
+                // 未知格式，返回 0
+                System.out.println("⚠️  未知的样本大小: " + sampleSize);
+                return 0;
             }
+        } catch (Exception e) {
+            System.err.println("❌ 样本提取失败: " + e.getMessage());
+            return 0;
         }
     }
 
