@@ -114,11 +114,15 @@ public class AdminController {
         try {
             var type = new TypeToken<ApiResponse<List<User>>>(){}.getType();
             ApiResponse<List<User>> response = HttpClientService.get("/api/admin/users", type);
-            
+
             if (response.getCode() == 200 && response.getData() != null) {
                 usersTableView.setItems(FXCollections.observableArrayList(response.getData()));
+                System.out.println("✅ 成功加载 " + response.getData().size() + " 个用户");
+            } else {
+                System.err.println("❌ 加载用户失败: code=" + response.getCode() + ", message=" + response.getMessage());
             }
         } catch (Exception e) {
+            System.err.println("❌ 加载用户异常:");
             e.printStackTrace();
         }
     }
@@ -127,11 +131,15 @@ public class AdminController {
         try {
             var type = new TypeToken<ApiResponse<List<Group>>>(){}.getType();
             ApiResponse<List<Group>> response = HttpClientService.get("/api/admin/groups", type);
-            
+
             if (response.getCode() == 200 && response.getData() != null) {
                 groupsTableView.setItems(FXCollections.observableArrayList(response.getData()));
+                System.out.println("✅ 成功加载 " + response.getData().size() + " 个群组");
+            } else {
+                System.err.println("❌ 加载群组失败: code=" + response.getCode() + ", message=" + response.getMessage());
             }
         } catch (Exception e) {
+            System.err.println("❌ 加载群组异常:");
             e.printStackTrace();
         }
     }
@@ -140,11 +148,15 @@ public class AdminController {
         try {
             var type = new TypeToken<ApiResponse<List<CallLog>>>(){}.getType();
             ApiResponse<List<CallLog>> response = HttpClientService.get("/api/admin/calls", type);
-            
+
             if (response.getCode() == 200 && response.getData() != null) {
                 callLogsTableView.setItems(FXCollections.observableArrayList(response.getData()));
+                System.out.println("✅ 成功加载 " + response.getData().size() + " 条通话记录");
+            } else {
+                System.err.println("❌ 加载通话记录失败: code=" + response.getCode() + ", message=" + response.getMessage());
             }
         } catch (Exception e) {
+            System.err.println("❌ 加载通话记录异常:");
             e.printStackTrace();
         }
     }

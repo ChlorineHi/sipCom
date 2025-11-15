@@ -141,6 +141,57 @@
     -fx-padding: 5 15;
 }
 
+/* 聊天区域样式 */
+.chat-area {
+    -fx-background-color: #1e1e1e;
+    -fx-control-inner-background: #1e1e1e;
+    -fx-text-fill: #d4d4d4;
+    -fx-font-size: 13px;
+    -fx-font-family: "Consolas", "Microsoft YaHei", monospace;
+    -fx-border-color: #3e3e42;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.chat-area .scroll-pane {
+    -fx-background-color: #1e1e1e;
+}
+
+.message-input {
+    -fx-background-color: #3c3c3c;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-padding: 8 10;
+    -fx-border-color: #3e3e42;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.message-input:focused {
+    -fx-border-color: #007acc;
+    -fx-background-color: #2d2d30;
+}
+
+.send-button {
+    -fx-background-color: #0e639c;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-padding: 8 20;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+    -fx-min-width: 80px;
+}
+
+.send-button:hover {
+    -fx-background-color: #1177bb;
+}
+
+.send-button:pressed {
+    -fx-background-color: #006bb3;
+}
+
 /* 滚动条样式 */
 .scroll-bar {
     -fx-background-color: #2d2d30;

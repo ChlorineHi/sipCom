@@ -16,6 +16,10 @@ public class ConferenceMediaManager {
     private String localIp;
     private int baseAudioPort;
     private int baseVideoPort;
+
+    // 端口池管理
+    private final Set<Integer> allocatedPorts = ConcurrentHashMap.newKeySet();
+    private final Object portLock = new Object();
     
     // 参与者连接管理
     private final Map<String, ParticipantConnection> participants;
@@ -53,24 +57,30 @@ public class ConferenceMediaManager {
     public ConferenceMediaManager() {
         this.participants = new ConcurrentHashMap<>();
         this.videoViews = new ConcurrentHashMap<>();
-        
+
         try {
             // 获取本地IP
             localIp = InetAddress.getLocalHost().getHostAddress();
-            
+
             // 分配基础RTP端口
             Random random = new Random();
             baseAudioPort = ClientConfig.RTP_PORT_START + random.nextInt(1000) * 10;
             baseVideoPort = baseAudioPort + 1000;
-            
+
             // 初始化音频混音器
             audioMixer = new AudioMixer();
-            
+
+            // 添加shutdown hook，确保资源清理
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                System.out.println("检测到JVM关闭，清理会议资源...");
+                stopConference();
+            }, "ConferenceMediaManager-ShutdownHook"));
+
             System.out.println("会议媒体管理器初始化完成");
             System.out.println("本地IP: " + localIp);
             System.out.println("基础音频端口: " + baseAudioPort);
             System.out.println("基础视频端口: " + baseVideoPort);
-            
+
         } catch (Exception e) {
             System.err.println("初始化会议媒体管理器失败: " + e.getMessage());
             e.printStackTrace();
@@ -186,20 +196,72 @@ public class ConferenceMediaManager {
     public void removeParticipant(String username) {
         ParticipantConnection conn = participants.remove(username);
         if (conn != null) {
-            // 停止音频
-            if (conn.audioForwarder != null) conn.audioForwarder.stop();
-            if (conn.audioReceiver != null) conn.audioReceiver.stop();
-            
-            // 停止视频
-            if (conn.videoSender != null) conn.videoSender.stop();
-            if (conn.videoReceiver != null) conn.videoReceiver.stop();
-            
-            // 从混音器移除
-            if (conn.audioMixerIndex >= 0) {
-                audioMixer.removeAudioSource(conn.audioMixerIndex);
+            try {
+                // 停止音频转发器
+                if (conn.audioForwarder != null) {
+                    try {
+                        conn.audioForwarder.stop();
+                    } catch (Exception e) {
+                        System.err.println("停止音频转发器失败: " + e.getMessage());
+                    }
+                    conn.audioForwarder = null;
+                }
+
+                // 停止音频接收器
+                if (conn.audioReceiver != null) {
+                    try {
+                        conn.audioReceiver.stop();
+                    } catch (Exception e) {
+                        System.err.println("停止音频接收器失败: " + e.getMessage());
+                    }
+                    conn.audioReceiver = null;
+                }
+
+                // 停止视频发送器
+                if (conn.videoSender != null) {
+                    try {
+                        conn.videoSender.stop();
+                    } catch (Exception e) {
+                        System.err.println("停止视频发送器失败: " + e.getMessage());
+                    }
+                    conn.videoSender = null;
+                }
+
+                // 停止视频接收器
+                if (conn.videoReceiver != null) {
+                    try {
+                        conn.videoReceiver.stop();
+                    } catch (Exception e) {
+                        System.err.println("停止视频接收器失败: " + e.getMessage());
+                    }
+                    conn.videoReceiver = null;
+                }
+
+                // 从混音器移除
+                if (conn.audioMixerIndex >= 0) {
+                    try {
+                        audioMixer.removeAudioSource(conn.audioMixerIndex);
+                    } catch (Exception e) {
+                        System.err.println("从混音器移除音频源失败: " + e.getMessage());
+                    }
+                }
+
+                // 释放端口
+                if (conn.localAudioPort > 0) {
+                    releasePort(conn.localAudioPort);
+                    releasePort(conn.localAudioPort + 1);
+                }
+                if (conn.localVideoPort > 0) {
+                    releasePort(conn.localVideoPort);
+                    releasePort(conn.localVideoPort + 1);
+                }
+
+                System.out.println("✅ 参与者 " + username + " 资源已清理");
+
+            } catch (Exception e) {
+                System.err.println("移除参与者 " + username + " 时发生错误: " + e.getMessage());
+                e.printStackTrace();
             }
-            
-            System.out.println("移除参与者 " + username);
         }
     }
     
@@ -253,31 +315,63 @@ public class ConferenceMediaManager {
      * 停止会议
      */
     public void stopConference() {
-        // 停止所有参与者连接
-        for (String username : new ArrayList<>(participants.keySet())) {
-            removeParticipant(username);
+        System.out.println("开始停止会议，清理所有资源...");
+
+        try {
+            // 停止所有参与者连接
+            for (String username : new ArrayList<>(participants.keySet())) {
+                removeParticipant(username);
+            }
+
+            // 停止混音器
+            if (audioMixer != null) {
+                try {
+                    audioMixer.stop();
+                } catch (Exception e) {
+                    System.err.println("停止混音器失败: " + e.getMessage());
+                }
+                audioMixer = null;
+            }
+
+            // 停止本地音频采集器
+            if (sharedAudioCapture != null) {
+                try {
+                    // 共享音频采集器会自动管理生命周期
+                    sharedAudioCapture = null;
+                } catch (Exception e) {
+                    System.err.println("停止音频采集器失败: " + e.getMessage());
+                }
+            }
+
+            // 停止本地视频发送器
+            if (localVideoSender != null) {
+                try {
+                    localVideoSender.stop();
+                } catch (Exception e) {
+                    System.err.println("停止本地视频发送器失败: " + e.getMessage());
+                }
+                localVideoSender = null;
+            }
+
+            // 停止本地视频接收器
+            if (localVideoReceiver != null) {
+                try {
+                    localVideoReceiver.stop();
+                } catch (Exception e) {
+                    System.err.println("停止本地视频接收器失败: " + e.getMessage());
+                }
+                localVideoReceiver = null;
+            }
+
+            // 清空视频视图映射
+            videoViews.clear();
+
+            System.out.println("✅ 会议已停止，所有资源已清理");
+
+        } catch (Exception e) {
+            System.err.println("停止会议过程中发生错误: " + e.getMessage());
+            e.printStackTrace();
         }
-        
-        // 停止混音器
-        if (audioMixer != null) {
-            audioMixer.stop();
-        }
-        
-        // 停止本地音频和视频发送器、接收器
-        if (sharedAudioCapture != null) {
-            // 共享音频采集器会自动管理生命周期
-            sharedAudioCapture = null;
-        }
-        if (localVideoSender != null) {
-            localVideoSender.stop();
-            localVideoSender = null;
-        }
-        if (localVideoReceiver != null) {
-            localVideoReceiver.stop();
-            localVideoReceiver = null;
-        }
-        
-        System.out.println("会议已停止");
     }
     
     /**
@@ -333,15 +427,36 @@ public class ConferenceMediaManager {
     }
     
     /**
-     * 查找可用端口
+     * 查找可用端口（改进版：使用端口池和锁机制）
      */
     private int findAvailablePort(int startPort) {
-        for (int port = startPort; port < startPort + 100; port += 2) {
-            if (isPortAvailable(port)) {
-                return port;
+        synchronized (portLock) {
+            for (int port = startPort; port < startPort + 100; port += 2) {
+                // 检查端口是否已被分配
+                if (allocatedPorts.contains(port)) {
+                    continue;
+                }
+
+                // 检查端口是否真正可用
+                if (isPortAvailable(port)) {
+                    allocatedPorts.add(port);
+                    System.out.println("分配端口: " + port);
+                    return port;
+                }
+            }
+            throw new RuntimeException("无法找到可用端口，起始端口: " + startPort);
+        }
+    }
+
+    /**
+     * 释放端口
+     */
+    private void releasePort(int port) {
+        synchronized (portLock) {
+            if (allocatedPorts.remove(port)) {
+                System.out.println("释放端口: " + port);
             }
         }
-        throw new RuntimeException("无法找到可用端口，起始端口: " + startPort);
     }
     
     /**

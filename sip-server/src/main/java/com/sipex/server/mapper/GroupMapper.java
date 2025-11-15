@@ -9,14 +9,14 @@ import java.util.List;
 @Mapper
 public interface GroupMapper {
 
-    @Insert("INSERT INTO groups (group_name, creator_id, description) VALUES (#{groupName}, #{creatorId}, #{description})")
+    @Insert("INSERT INTO `groups` (group_name, creator_id, description) VALUES (#{groupName}, #{creatorId}, #{description})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(Group group);
 
-    @Select("SELECT * FROM groups WHERE id = #{id}")
+    @Select("SELECT * FROM `groups` WHERE id = #{id}")
     Group findById(Long id);
 
-    @Select("SELECT g.* FROM groups g INNER JOIN group_members gm ON g.id = gm.group_id WHERE gm.user_id = #{userId}")
+    @Select("SELECT g.* FROM `groups` g INNER JOIN group_members gm ON g.id = gm.group_id WHERE gm.user_id = #{userId}")
     List<Group> findByUserId(Long userId);
 
     @Insert("INSERT INTO group_members (group_id, user_id) VALUES (#{groupId}, #{userId})")
@@ -28,7 +28,7 @@ public interface GroupMapper {
     @Select("SELECT u.* FROM users u INNER JOIN group_members gm ON u.id = gm.user_id WHERE gm.group_id = #{groupId}")
     List<User> findMembers(Long groupId);
 
-    @Select("SELECT * FROM groups")
+    @Select("SELECT * FROM `groups`")
     List<Group> findAll();
 }
 

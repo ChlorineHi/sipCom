@@ -21,10 +21,12 @@ public class ConferenceRoom {
     private LocalDateTime createdAt;                 // 创建时间
     private LocalDateTime lastActivityAt;            // 最后活动时间
     private int maxParticipants;                     // 最大参与者数量（默认5）
+    private List<ConferenceMessageDTO> messages;     // 会议室消息列表
     
     public ConferenceRoom(String roomId) {
         this.roomId = roomId;
         this.participants = new ArrayList<>();
+        this.messages = new ArrayList<>();
         this.createdAt = LocalDateTime.now();
         this.lastActivityAt = LocalDateTime.now();
         this.maxParticipants = 5;
@@ -75,6 +77,25 @@ public class ConferenceRoom {
      */
     public void updateActivity() {
         this.lastActivityAt = LocalDateTime.now();
+    }
+
+    /**
+     * 添加消息
+     */
+    public void addMessage(ConferenceMessageDTO message) {
+        this.messages.add(message);
+        updateActivity();
+    }
+
+    /**
+     * 获取最近的消息
+     */
+    public List<ConferenceMessageDTO> getRecentMessages(int limit) {
+        int size = messages.size();
+        if (size <= limit) {
+            return new ArrayList<>(messages);
+        }
+        return new ArrayList<>(messages.subList(size - limit, size));
     }
 }
 

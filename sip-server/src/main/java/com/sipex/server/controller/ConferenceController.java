@@ -4,6 +4,7 @@ import com.sipex.common.dto.ApiResponse;
 import com.sipex.common.dto.ConferenceRequest;
 import com.sipex.common.dto.ConferenceResponse;
 import com.sipex.common.dto.ConferenceRoom;
+import com.sipex.common.dto.ConferenceMessageDTO;
 import com.sipex.server.service.ConferenceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -114,6 +115,36 @@ public class ConferenceController {
     public ApiResponse<Integer> getActiveRoomCount() {
         int count = conferenceService.getActiveRoomCount();
         return ApiResponse.success(count);
+    }
+
+    /**
+     * 发送会议室消息
+     */
+    @PostMapping("/{roomId}/message")
+    public ApiResponse<ConferenceMessageDTO> sendMessage(
+            @PathVariable String roomId,
+            @RequestBody ConferenceMessageDTO message) {
+        try {
+            ConferenceMessageDTO savedMessage = conferenceService.addMessage(roomId, message);
+            return ApiResponse.success(savedMessage);
+        } catch (Exception e) {
+            return ApiResponse.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 获取会议室消息列表
+     */
+    @GetMapping("/{roomId}/messages")
+    public ApiResponse<List<ConferenceMessageDTO>> getMessages(
+            @PathVariable String roomId,
+            @RequestParam(defaultValue = "50") int limit) {
+        try {
+            List<ConferenceMessageDTO> messages = conferenceService.getMessages(roomId, limit);
+            return ApiResponse.success(messages);
+        } catch (Exception e) {
+            return ApiResponse.error(e.getMessage());
+        }
     }
 }
 

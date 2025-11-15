@@ -43,12 +43,23 @@
             <padding>
                 <Insets top="15" right="20" bottom="15" left="20"/>
             </padding>
-            
+
+            <!-- 聊天区域 -->
+            <TitledPane text="💬 群聊消息" expanded="true" collapsible="true">
+                <VBox spacing="5">
+                    <TextArea fx:id="chatArea" editable="false" wrapText="true" prefHeight="100" styleClass="chat-area"/>
+                    <HBox spacing="10">
+                        <TextField fx:id="messageInput" promptText="输入消息..." HBox.hgrow="ALWAYS" styleClass="message-input"/>
+                        <Button text="发送" onAction="#handleSendMessage" styleClass="send-button"/>
+                    </HBox>
+                </VBox>
+            </TitledPane>
+
             <!-- 参与者列表 -->
-            <TitledPane text="参与者列表" expanded="true" collapsible="true">
+            <TitledPane text="参与者列表" expanded="false" collapsible="true">
                 <ListView fx:id="participantListView" prefHeight="120" styleClass="participant-list"/>
             </TitledPane>
-            
+
             <!-- 控制按钮 -->
             <HBox spacing="15" alignment="CENTER">
                 <Button fx:id="muteButton" text="🎤 静音" onAction="#handleMute" styleClass="control-button"/>

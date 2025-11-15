@@ -34,6 +34,8 @@ public class ConferenceController implements ConferenceSipManager.ConferenceCall
     @FXML private Button videoButton;
     @FXML private Button switchVideoButton;
     @FXML private Label statusLabel;
+    @FXML private TextArea chatArea;
+    @FXML private TextField messageInput;
     
     private String currentRoomId;
     private String currentUsername;
@@ -42,6 +44,10 @@ public class ConferenceController implements ConferenceSipManager.ConferenceCall
     
     private boolean isMuted = false;
     private boolean isVideoEnabled = true;
+
+    // 消息轮询定时器
+    private Timer messagePolltimer;
+    private int lastMessageCount = 0;
     
     // 参与者视频显示映射
     private final Map<String, VBox> participantVideoBoxes = new ConcurrentHashMap<>();
@@ -121,7 +127,10 @@ public class ConferenceController implements ConferenceSipManager.ConferenceCall
                 
                 // 开始轮询参与者列表
                 startPolling();
-                
+
+                // 开始轮询消息
+                startMessagePolling();
+
                 System.out.println("✅ 会议室创建成功: " + currentRoomId);
             } else {
                 showError("创建会议室失败: " + apiResponse.getMessage());
@@ -189,7 +198,10 @@ public class ConferenceController implements ConferenceSipManager.ConferenceCall
                 
                 // 开始轮询参与者列表
                 startPolling();
-                
+
+                // 开始轮询消息
+                startMessagePolling();
+
                 System.out.println("✅ 加入会议室成功: " + currentRoomId);
             } else {
                 showError("加入会议室失败: " + apiResponse.getMessage());
@@ -361,21 +373,24 @@ public class ConferenceController implements ConferenceSipManager.ConferenceCall
     public void onParticipantConnected(String username, String sdp) {
         Platform.runLater(() -> {
             statusLabel.setText(username + " 已连接");
-            
-            // 检查参与者是否已添加（防止重复）
-            if (participantVideoBoxes.containsKey(username)) {
-                System.out.println("⚠️  参与者 " + username + " 已连接过，跳过重复处理");
-                return;
+
+            // 使用同步块防止并发问题
+            synchronized(participantVideoBoxes) {
+                // 检查参与者是否已添加（防止重复）
+                if (participantVideoBoxes.containsKey(username)) {
+                    System.out.println("⚠️  参与者 " + username + " 已连接过，跳过重复处理");
+                    return;
+                }
+
+                System.out.println("✅ 添加新参与者: " + username);
+
+                // 创建视频显示框
+                VBox videoBox = createVideoBox(username);
+                participantVideoBoxes.put(username, videoBox);
+                updateVideoGrid();
             }
-            
-            System.out.println("✅ 添加新参与者: " + username);
-            
-            // 创建视频显示框
-            VBox videoBox = createVideoBox(username);
-            participantVideoBoxes.put(username, videoBox);
-            updateVideoGrid();
-            
-            // 启动媒体流
+
+            // 启动媒体流（在同步块外执行，避免死锁）
             mediaManager.addParticipant(username, sdp, true);
         });
     }
@@ -384,11 +399,14 @@ public class ConferenceController implements ConferenceSipManager.ConferenceCall
     public void onParticipantDisconnected(String username) {
         Platform.runLater(() -> {
             statusLabel.setText(username + " 已离开");
-            
-            // 移除视频显示
-            participantVideoBoxes.remove(username);
-            updateVideoGrid();
-            
+
+            // 使用同步块防止并发问题
+            synchronized(participantVideoBoxes) {
+                // 移除视频显示
+                participantVideoBoxes.remove(username);
+                updateVideoGrid();
+            }
+
             // 停止媒体流
             mediaManager.removeParticipant(username);
         });
@@ -399,31 +417,36 @@ public class ConferenceController implements ConferenceSipManager.ConferenceCall
         // 自动接受群聊呼叫
         Platform.runLater(() -> {
             try {
-                // 创建视频显示框
-                if (!participantVideoBoxes.containsKey(caller)) {
-                    VBox videoBox = createVideoBox(caller);
-                    participantVideoBoxes.put(caller, videoBox);
-                    updateVideoGrid();
+                int participantIndex;
+
+                // 使用同步块防止并发问题
+                synchronized(participantVideoBoxes) {
+                    // 创建视频显示框
+                    if (!participantVideoBoxes.containsKey(caller)) {
+                        VBox videoBox = createVideoBox(caller);
+                        participantVideoBoxes.put(caller, videoBox);
+                        updateVideoGrid();
+                    }
+                    participantIndex = participantVideoBoxes.size() - 1;
                 }
-                
+
                 // 创建应答SDP
-                int participantIndex = participantVideoBoxes.size() - 1;
                 String answerSdp = mediaManager.createSdpOffer(sdp.contains("m=video"), participantIndex);
-                
+
                 // 发送200 OK
                 javax.sip.message.Response okResponse = sipManager.getMessageFactory().createResponse(
-                    javax.sip.message.Response.OK, 
+                    javax.sip.message.Response.OK,
                     request
                 );
-                
+
                 okResponse.setContent(answerSdp, sipManager.getHeaderFactory().createContentTypeHeader("application", "sdp"));
                 transaction.sendResponse(okResponse);
-                
+
                 // 启动媒体流
                 mediaManager.addParticipant(caller, sdp, sdp.contains("m=video"));
-                
+
                 statusLabel.setText(caller + " 已加入会议");
-                
+
             } catch (Exception e) {
                 System.err.println("接受呼叫失败: " + e.getMessage());
                 e.printStackTrace();
@@ -478,42 +501,162 @@ public class ConferenceController implements ConferenceSipManager.ConferenceCall
             if (pollTimer != null) {
                 pollTimer.cancel();
             }
-            
+
+            // 停止消息轮询
+            if (messagePolltimer != null) {
+                messagePolltimer.cancel();
+            }
+
             // 通知服务器离开
             ConferenceRequest request = new ConferenceRequest();
             request.setUsername(currentUsername);
             request.setRoomId(currentRoomId);
             request.setAction("leave");
-            
+
             var responseType = com.google.gson.reflect.TypeToken.getParameterized(
                 ApiResponse.class,
                 ConferenceResponse.class
             ).getType();
-            
+
             HttpClientService.post(
                 "/api/conference/leave",
                 request,
                 responseType
             );
-            
+
             // 停止所有SIP连接
             sipManager.hangupAll();
             sipManager.shutdown();
-            
+
             // 停止媒体流
             mediaManager.stopConference();
-            
+
             // 关闭窗口
             Platform.runLater(() -> {
                 leaveButton.getScene().getWindow().hide();
             });
-            
+
             System.out.println("已离开会议: " + currentRoomId);
-            
+
         } catch (Exception e) {
             System.err.println("离开会议失败: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    // ========== 群聊消息功能 ==========
+
+    /**
+     * 发送消息
+     */
+    @FXML
+    private void handleSendMessage() {
+        String content = messageInput.getText().trim();
+        if (content.isEmpty()) {
+            return;
+        }
+
+        try {
+            // 创建消息DTO
+            var messageDTO = new com.sipex.common.dto.ConferenceMessageDTO();
+            messageDTO.setRoomId(currentRoomId);
+            messageDTO.setFromUser(currentUsername);
+            messageDTO.setContent(content);
+            messageDTO.setMessageType("text");
+
+            // 发送到服务器
+            var responseType = com.google.gson.reflect.TypeToken.getParameterized(
+                ApiResponse.class,
+                com.sipex.common.dto.ConferenceMessageDTO.class
+            ).getType();
+
+            HttpClientService.post(
+                "/api/conference/" + currentRoomId + "/message",
+                messageDTO,
+                responseType
+            );
+
+            // 清空输入框
+            messageInput.clear();
+
+            // 立即刷新消息
+            refreshMessages();
+
+        } catch (Exception e) {
+            System.err.println("发送消息失败: " + e.getMessage());
+            e.printStackTrace();
+            Platform.runLater(() -> {
+                statusLabel.setText("发送消息失败");
+            });
+        }
+    }
+
+    /**
+     * 启动消息轮询
+     */
+    private void startMessagePolling() {
+        messagePolltimer = new Timer("Message-Poller", true);
+        messagePolltimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                refreshMessages();
+            }
+        }, 1000, 1000); // 每1秒轮询一次
+    }
+
+    /**
+     * 刷新消息列表
+     */
+    private void refreshMessages() {
+        try {
+            var responseType = com.google.gson.reflect.TypeToken.getParameterized(
+                ApiResponse.class,
+                com.google.gson.reflect.TypeToken.getParameterized(
+                    List.class,
+                    com.sipex.common.dto.ConferenceMessageDTO.class
+                ).getType()
+            ).getType();
+
+            ApiResponse<?> apiResponse = HttpClientService.get(
+                "/api/conference/" + currentRoomId + "/messages?limit=50",
+                responseType
+            );
+
+            if (apiResponse.getCode() == 200) {
+                @SuppressWarnings("unchecked")
+                List<com.sipex.common.dto.ConferenceMessageDTO> messages =
+                    (List<com.sipex.common.dto.ConferenceMessageDTO>) apiResponse.getData();
+
+                // 只有新消息才更新UI
+                if (messages.size() != lastMessageCount) {
+                    lastMessageCount = messages.size();
+                    Platform.runLater(() -> updateChatArea(messages));
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("刷新消息失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 更新聊天区域
+     */
+    private void updateChatArea(List<com.sipex.common.dto.ConferenceMessageDTO> messages) {
+        StringBuilder sb = new StringBuilder();
+        for (var message : messages) {
+            String sender = message.getFromUser();
+            if (sender.equals(currentUsername)) {
+                sender = "我";
+            }
+            sb.append(String.format("[%s] %s: %s\n",
+                message.getTimestamp(),
+                sender,
+                message.getContent()));
+        }
+        chatArea.setText(sb.toString());
+
+        // 滚动到底部
+        chatArea.setScrollTop(Double.MAX_VALUE);
     }
     
     private void showError(String message) {

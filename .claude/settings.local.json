@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(mysql:*)",
+      "Bash(netstat:*)",
+      "Bash(curl:*)",
+      "Bash(grep:*)",
+      "Bash(mvn clean install:*)",
+      "Bash(taskkill:*)",
+      "Bash(find:*)",
+      "Bash(python -m json.tool:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
